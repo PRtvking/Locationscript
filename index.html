@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<meta name="description" content="Share your current GPS location by SMS.">
+<title>Share My Location</title>
+<style>
+:root{
+  --bg:#080a0d; --card:#111419; --line:#30343b; --text:#f7f7f7;
+  --muted:#a7adb7; --accent:#35e56b; --blue:#4da3ff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; color:var(--text);
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  background:
+    radial-gradient(circle at 50% 0%,#20252c 0,transparent 36%),
+    linear-gradient(145deg,#080a0d,#11151a 55%,#080a0d);
+}
+.wrap{width:min(100%,520px);margin:auto;padding:24px 18px 38px}
+.card{
+  background:rgba(17,20,25,.94); border:1px solid var(--line);
+  border-radius:24px; padding:24px; box-shadow:0 20px 70px #0008;
+}
+.logo{
+  width:72px;height:72px;border-radius:50%;margin:4px auto 18px;
+  display:grid;place-items:center;font-size:38px;
+  background:linear-gradient(145deg,#fff,#aeb4bd);color:#111;
+  box-shadow:0 0 0 7px #ffffff0d;
+}
+h1{text-align:center;font-size:30px;line-height:1.05;margin:0 0 10px;letter-spacing:-.8px}
+.sub{text-align:center;color:var(--muted);margin:0 auto 25px;line-height:1.5}
+label{display:block;font-size:14px;font-weight:700;margin:0 0 8px}
+input{
+  width:100%;height:54px;border:1px solid #464b54;border-radius:14px;
+  background:#0c0f13;color:#fff;font-size:17px;padding:0 15px;outline:none;
+}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #4da3ff20}
+button{
+  width:100%;min-height:54px;border:0;border-radius:14px;margin-top:14px;
+  font-size:16px;font-weight:800;cursor:pointer;transition:.15s;
+}
+button:active{transform:scale(.985)}
+.primary{background:#fff;color:#0b0d10}
+.primary:disabled{opacity:.55;cursor:wait}
+.secondary{background:#171b21;color:#fff;border:1px solid #3b4048}
+.status{
+  margin-top:16px;padding:13px 14px;border-radius:12px;
+  background:#0d1014;color:var(--muted);font-size:14px;line-height:1.45;
+  text-align:center;
+}
+.result{display:none;margin-top:18px}
+.result.show{display:block}
+.success{
+  display:flex;gap:12px;align-items:center;padding:14px;border-radius:14px;
+  background:#35e56b12;border:1px solid #35e56b45;
+}
+.check{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#07100a;font-weight:900}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.stat{padding:12px;border:1px solid var(--line);border-radius:12px;background:#0d1014}
+.stat small{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}
+.stat strong{font-size:14px;word-break:break-all}
+a.map{
+  display:flex;justify-content:center;align-items:center;min-height:50px;
+  margin-top:12px;border:1px solid #4da3ff55;border-radius:13px;
+  color:#8ec8ff;text-decoration:none;font-weight:800;
+}
+.note{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.55;text-align:center}
+.hidden{display:none!important}
+@media(max-width:380px){.wrap{padding:14px}.card{padding:18px}h1{font-size:26px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="card">
+    <div class="logo" aria-hidden="true">⌖</div>
+    <h1>Share My Location</h1>
+    <p class="sub">Quickly send your current GPS location to any phone number.</p>
+
+    <label for="phone">Phone Number</label>
+    <input id="phone" type="tel" inputmode="tel" autocomplete="tel"
+           placeholder="787-555-1234" aria-label="Phone number">
+
+    <button id="getBtn" class="primary">📍 Get My GPS Location</button>
+
+    <div id="status" class="status">
+      Your location is requested only after you press the button.
+    </div>
+
+    <div id="result" class="result">
+      <div class="success">
+        <div class="check">✓</div>
+        <div><strong>Location Found</strong><br><span id="accuracyText">GPS coordinates retrieved.</span></div>
+      </div>
+
+      <div class="grid">
+        <div class="stat"><small>LATITUDE</small><strong id="lat">—</strong></div>
+        <div class="stat"><small>LONGITUDE</small><strong id="lon">—</strong></div>
+      </div>
+
+      <a id="mapLink" class="map" href="#" target="_blank" rel="noopener">🗺️ View on Google Maps</a>
+
+      <button id="smsBtn" class="primary">💬 Open Messages With Location</button>
+      <button id="copyBtn" class="secondary">Copy Location Link</button>
+    </div>
+
+    <div class="note">
+      GPS permission is controlled by your browser. This page does not store your
+      coordinates on a server. Sending is completed by your phone's messaging app.
+    </div>
+  </section>
+</main>
+
+<script>
+const phone = document.getElementById("phone");
+const getBtn = document.getElementById("getBtn");
+const smsBtn = document.getElementById("smsBtn");
+const copyBtn = document.getElementById("copyBtn");
+const statusBox = document.getElementById("status");
+const result = document.getElementById("result");
+const latEl = document.getElementById("lat");
+const lonEl = document.getElementById("lon");
+const accuracyText = document.getElementById("accuracyText");
+const mapLink = document.getElementById("mapLink");
+
+let locationData = null;
+
+function setStatus(text){ statusBox.textContent = text; }
+
+function validPhone(value){
+  const digits = value.replace(/\D/g,"");
+  return digits.length >= 7;
+}
+
+function smsUrl(number, message){
+  // Works with common Android/iPhone SMS handlers.
+  return `sms:${number}?body=${encodeURIComponent(message)}`;
+}
+
+getBtn.addEventListener("click", () => {
+  const number = phone.value.trim();
+
+  if(!validPhone(number)){
+    setStatus("Enter a valid phone number first.");
+    phone.focus();
+    return;
+  }
+
+  if(!window.isSecureContext){
+    setStatus("GPS requires HTTPS. Open this page through your GitHub Pages HTTPS address.");
+    return;
+  }
+
+  if(!navigator.geolocation){
+    setStatus("This browser does not support GPS location.");
+    return;
+  }
+
+  getBtn.disabled = true;
+  result.classList.remove("show");
+  setStatus("Requesting GPS permission and finding your location…");
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      const accuracy = Math.round(position.coords.accuracy);
+      const maps = `https://www.google.com/maps?q=${lat},${lon}`;
+
+      locationData = {number, lat, lon, accuracy, maps};
+
+      latEl.textContent = lat.toFixed(6);
+      lonEl.textContent = lon.toFixed(6);
+      accuracyText.textContent = `Accuracy: approximately ${accuracy} meters`;
+      mapLink.href = maps;
+
+      result.classList.add("show");
+      setStatus("Location retrieved. Review it, then open Messages.");
+      getBtn.disabled = false;
+    },
+    error => {
+      getBtn.disabled = false;
+      if(error.code === error.PERMISSION_DENIED)
+        setStatus("Location permission was denied. Allow location access and try again.");
+      else if(error.code === error.POSITION_UNAVAILABLE)
+        setStatus("Your device could not determine a location. Try again outdoors or near a window.");
+      else if(error.code === error.TIMEOUT)
+        setStatus("GPS took too long to respond. Try again.");
+      else
+        setStatus("Unable to retrieve your location. Try again.");
+    },
+    {enableHighAccuracy:true, timeout:20000, maximumAge:0}
+  );
+});
+
+smsBtn.addEventListener("click", () => {
+  if(!locationData) return;
+  const {number, lat, lon, accuracy, maps} = locationData;
+  const message =
+`📍 My current location:
+${maps}
+
+GPS accuracy: approximately ${accuracy} meters
+Coordinates: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+
+  window.location.href = smsUrl(number, message);
+});
+
+copyBtn.addEventListener("click", async () => {
+  if(!locationData) return;
+  try{
+    await navigator.clipboard.writeText(locationData.maps);
+    setStatus("Google Maps location link copied.");
+  }catch{
+    setStatus("Copy was blocked by the browser. Use the Google Maps button instead.");
+  }
+});
+</script>
+</body>
+</html>
